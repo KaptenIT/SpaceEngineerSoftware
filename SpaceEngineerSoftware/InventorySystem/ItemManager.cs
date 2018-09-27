@@ -225,6 +225,16 @@ namespace IngameScript {
                 return FillRefineryInfo.Success;
             }
 
+            public void Dedup(IMyInventory inventory) {
+                var items = inventory.GetItems();
+                for (int i = 0; i < items.Count;) {
+                    int j = i + 1;
+                    while (search(item => item == items[i], inventory, ref j) > 0) {//TODO: Check if this equality check actually works
+                        inventory.TransferItemTo(inventory, j, i, true);
+                    }
+                }
+            }
+
             /// <summary>
             /// Return amount of item at first position at or after `index` matcing `p()`
             /// `index` will be set to this position if item was found otherwise `itemCount`

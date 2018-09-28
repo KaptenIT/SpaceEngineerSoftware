@@ -19,7 +19,7 @@ namespace IngameScript {
     partial class Program : MyGridProgram {
 
         public Program() {
-            Runtime.UpdateFrequency = UpdateFrequency.Update10;
+            Runtime.UpdateFrequency = UpdateFrequency.Update100;
             //Runtime.CurrentInstructionCount;
             //Runtime.MaxInstructionCount;
 
@@ -27,9 +27,16 @@ namespace IngameScript {
 
             oreSorter = new ItemSorter<IMyTerminalBlock, IMyCargoContainer>(
                 itemManager,
-                src => !(src is IMyRefinery) && !(src is IMyReactor),
+                src => !(src is IMyAssembler) && !(src is IMyGasGenerator) && !(src is IMyRefinery) && !(src is IMyReactor),
                 Utils.isMetal,
                 "Metal Containers",
+                true
+            );
+            componentSorter = new ItemSorter<IMyTerminalBlock, IMyCargoContainer>(
+                itemManager,
+                src => src.CubeGrid == Me.CubeGrid && !(src is IMyAssembler),
+                Utils.isComponent,
+                "Component Containers",
                 true
             );
         }
@@ -41,12 +48,26 @@ namespace IngameScript {
         }
 
         public void Main(string argument, UpdateType updateSource) {
-
+            var debugScreen = GridTerminalSystem.GetBlockWithName("DebugScreen 1") as IMyTextPanel;
+            debugScreen.WritePublicText($"Before: {Runtime.CurrentInstructionCount}/{Runtime.MaxInstructionCount}\n", false);
             oreSorter.Sort();
+            componentSorter.Sort();
 
+            List<IMyCargoContainer> blocks = new List<IMyCargoContainer>();
+            GridTerminalSystem.GetBlocksOfType(blocks, block => block.HasInventory);
+            int dedupCount = 0;
+            foreach (var block in blocks) {
+                if ((double)Runtime.CurrentInstructionCount / Runtime.MaxInstructionCount > 0.5)
+                    break;
+                itemManager.DedupOnce(block.GetInventory());
+                dedupCount++;
+            }
+            debugScreen.WritePublicText($"Dedup count: {dedupCount}/{blocks.Count}\n", true);
+            debugScreen.WritePublicText($"After: {Runtime.CurrentInstructionCount}/{Runtime.MaxInstructionCount}", true);
         }
 
         ItemManager itemManager;
         ItemSorter<IMyTerminalBlock, IMyCargoContainer> oreSorter;
+        ItemSorter<IMyTerminalBlock, IMyCargoContainer> componentSorter;
     }
 }

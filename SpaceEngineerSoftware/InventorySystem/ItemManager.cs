@@ -22,7 +22,6 @@ namespace IngameScript {
                 this.terminal = terminal;
             }
 
-
             public enum FillRefineryInfo {
                 Success = 0,
                 NoRefineries,
@@ -138,15 +137,18 @@ namespace IngameScript {
                 where T : class, IMyTerminalBlock
                 where U : class, IMyTerminalBlock {
 
-                HashSet<IMyTerminalBlock> outputSet = preventMoveToSelf ? new HashSet<IMyTerminalBlock>(outputs) : null;
+                //var debugScreen = terminal.GetBlockWithName("DebugScreen 1") as IMyTextPanel;
+                
+                HashSet<long> outputSet = preventMoveToSelf ? new HashSet<long>(outputs.Select(o => o.EntityId)) : null;
 
                 int dstIndex = -1;
                 if (!nextNonFull(outputs, ref dstIndex)) {
                     return false;//No dst with space left found
                 }
-                var dst = outputs[dstIndex].GetInventory(dstSubInventory);
 
-                var filteredInputs = preventMoveToSelf ? inputs.SkipWhile(input => outputSet.Contains(input)) : inputs;
+                var dst = outputs[dstIndex].GetInventory(dstSubInventory);
+                
+                var filteredInputs = preventMoveToSelf ? inputs.Where(input => !outputSet.Contains(input.EntityId)) : inputs;
 
                 foreach (var input in filteredInputs) {
                     int srcItemIndex = 0;
@@ -156,8 +158,12 @@ namespace IngameScript {
                         var srcItems = src.GetItems();
 
                         var itemCountBefore = srcItems.Count;
-                        var itemAmountBefore = srcItems[srcItemIndex].Amount;
-                        src.TransferItemTo(dst, srcItemIndex, 0, true);
+                        var itemAmountBefore = amountAtSlot;
+                        int dstItemIndex = 0;
+                        if(search(item => Utils.sameItem(item, srcItems[srcItemIndex]), dst, ref dstItemIndex) == 0) {
+                            dstItemIndex = 0;
+                        }
+                        src.TransferItemTo(dst, srcItemIndex, dstItemIndex, true);
                         var itemCountAfter = srcItems.Count;
 
                         //Nothing was moved, dst must be full
@@ -167,6 +173,7 @@ namespace IngameScript {
                             }
                             dst = outputs[dstIndex].GetInventory(dstSubInventory);
                         }
+                        amountAtSlot = search(itemFilter, src, ref srcItemIndex);
                     }
                 }
                 return true;
@@ -225,12 +232,13 @@ namespace IngameScript {
                 return FillRefineryInfo.Success;
             }
 
-            public void Dedup(IMyInventory inventory) {
+            public void DedupOnce(IMyInventory inventory) {
                 var items = inventory.GetItems();
-                for (int i = 0; i < items.Count;) {
+                for (int i = 0; i < items.Count; i++) {
                     int j = i + 1;
-                    while (search(item => item == items[i], inventory, ref j) > 0) {//TODO: Check if this equality check actually works
+                    if(search(item => Utils.sameItem(item, items[i]), inventory, ref j) > 0) {//TODO: Check if this equality check actually works
                         inventory.TransferItemTo(inventory, j, i, true);
+                        return;
                     }
                 }
             }

@@ -26,6 +26,10 @@ namespace IngameScript {
                 return item.Content.TypeId.ToString().Substring(16) == "Ingot";
             }
 
+            static public bool isComponent(IMyInventoryItem item) {
+                return item.Content.TypeId.ToString().Substring(16) == "Component";
+            }
+
             static public bool isMetal(IMyInventoryItem item) {
                 return isOre(item) || isIngot(item);
             }
@@ -36,6 +40,10 @@ namespace IngameScript {
 
             static public string itemSubName(IMyInventoryItem item) {
                 return item.Content.SubtypeId.ToString();
+            }
+
+            static public bool sameItem(IMyInventoryItem a, IMyInventoryItem b) {
+                return a.Content.TypeId == b.Content.TypeId && a.Content.SubtypeId == b.Content.SubtypeId;
             }
         }
     }
